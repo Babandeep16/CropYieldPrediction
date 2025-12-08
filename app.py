@@ -14,12 +14,14 @@ st.set_page_config(page_title="Crop Yield DSS", layout="wide")
 # --------------------------------------------------
 MODEL_PATH = "models/best_model.joblib"
 
+
 @st.cache_resource
 def load_model():
     if not os.path.exists(MODEL_PATH):
         st.error("Model file not found. Train and save best_model.joblib first.")
         return None
     return joblib.load(MODEL_PATH)
+
 
 model = load_model()
 
@@ -28,7 +30,8 @@ model = load_model()
 # --------------------------------------------------
 st.title("🌾 Crop Yield Prediction – Decision Support System")
 
-st.markdown("""
+st.markdown(
+    """
 This Decision Support System predicts **crop yield (hg/ha)** based on:
 - Region (Country)
 - Crop Type
@@ -41,8 +44,8 @@ It supports:
 ✔ Single prediction  
 ✔ What-if analysis  
 ✔ Model KPI monitoring  
-""")
-
+"""
+)
 
 # --------------------------------------------------
 # Load dataset for dropdown values
@@ -54,15 +57,17 @@ df = df.drop(columns=["Unnamed: 0"])
 countries = sorted(df["Area"].unique())
 crops = sorted(df["Item"].unique())
 
+# Year range for historical data and future scenarios
+MIN_YEAR = int(df["Year"].min())  # e.g., 1990
+HIST_MAX_YEAR = int(df["Year"].max())  # 2013 in this dataset
+FUTURE_MAX_YEAR = 2030  # can change to 2035/2040 if you want
 
 # --------------------------------------------------
 # Sidebar Navigation
 # --------------------------------------------------
 page = st.sidebar.radio(
-    "Navigation",
-    ["Single Prediction", "What-if Analysis", "Model KPIs"]
+    "Navigation", ["Single Prediction", "What-if Analysis", "Model KPIs"]
 )
-
 
 # --------------------------------------------------
 # PAGE 1 — Single Prediction
@@ -76,47 +81,54 @@ if page == "Single Prediction":
     with col1:
         area = st.selectbox("Country", countries)
         item = st.selectbox("Crop Type", crops)
-        year = st.slider("Year", int(df["Year"].min()), int(df["Year"].max()), 2005)
+        year = st.slider("Year", MIN_YEAR, FUTURE_MAX_YEAR, 2008)
 
     with col2:
         rainfall = st.number_input(
             "Average rainfall (mm/year)",
             float(df["average_rain_fall_mm_per_year"].min()),
             float(df["average_rain_fall_mm_per_year"].max()),
-            float(df["average_rain_fall_mm_per_year"].median())
+            float(df["average_rain_fall_mm_per_year"].median()),
         )
 
         temp = st.number_input(
             "Average temperature (°C)",
             float(df["avg_temp"].min()),
             float(df["avg_temp"].max()),
-            float(df["avg_temp"].median())
+            float(df["avg_temp"].median()),
         )
 
         pesticides = st.number_input(
             "Pesticides (tonnes)",
             float(df["pesticides_tonnes"].min()),
             float(df["pesticides_tonnes"].max()),
-            float(df["pesticides_tonnes"].median())
+            float(df["pesticides_tonnes"].median()),
         )
+
+    st.caption(
+        f"Historical data available for {MIN_YEAR}–{HIST_MAX_YEAR}. "
+        "Years after 2013 are forward-looking scenario predictions based on past patterns."
+    )
 
     if st.button("Predict Yield") and model is not None:
 
-        input_df = pd.DataFrame([{
-            "Area": area,
-            "Item": item,
-            "Year": year,
-            "average_rain_fall_mm_per_year": rainfall,
-            "pesticides_tonnes": pesticides,
-            "avg_temp": temp
-        }])
+        input_df = pd.DataFrame(
+            [
+                {
+                    "Area": area,
+                    "Item": item,
+                    "Year": year,
+                    "average_rain_fall_mm_per_year": rainfall,
+                    "pesticides_tonnes": pesticides,
+                    "avg_temp": temp,
+                }
+            ]
+        )
 
         pred = model.predict(input_df)[0]
 
         st.success(f"### 🌱 Predicted Yield: **{pred:,.0f} hg/ha**")
         st.caption("Model: Random Forest Regressor + full preprocessing pipeline.")
-
-
 
 # --------------------------------------------------
 # PAGE 2 — What-If Analysis
@@ -127,7 +139,7 @@ elif page == "What-if Analysis":
 
     base_area = st.selectbox("Country", countries)
     base_item = st.selectbox("Crop Type", crops)
-    base_year = st.slider("Year", int(df["Year"].min()), int(df["Year"].max()), 2005)
+    base_year = st.slider("Year", MIN_YEAR, FUTURE_MAX_YEAR, 2008)
 
     col1, col2, col3 = st.columns(3)
 
@@ -136,7 +148,7 @@ elif page == "What-if Analysis":
             "Rainfall (mm/year)",
             float(df["average_rain_fall_mm_per_year"].min()),
             float(df["average_rain_fall_mm_per_year"].max()),
-            float(df["average_rain_fall_mm_per_year"].median())
+            float(df["average_rain_fall_mm_per_year"].median()),
         )
 
     with col2:
@@ -144,7 +156,7 @@ elif page == "What-if Analysis":
             "Temperature (°C)",
             float(df["avg_temp"].min()),
             float(df["avg_temp"].max()),
-            float(df["avg_temp"].median())
+            float(df["avg_temp"].median()),
         )
 
     with col3:
@@ -153,28 +165,37 @@ elif page == "What-if Analysis":
             "Pesticides (log scale)",
             float(np.log1p(df["pesticides_tonnes"].min())),
             float(np.log1p(df["pesticides_tonnes"].max())),
-            float(np.log1p(df["pesticides_tonnes"].median()))
+            float(np.log1p(df["pesticides_tonnes"].median())),
         )
         pesticides = np.expm1(pesticides_log)
 
+    st.caption(
+        f"Model trained on historical years {MIN_YEAR}–{HIST_MAX_YEAR}. "
+        "Future years (after 2013) represent hypothetical what-if scenarios."
+    )
+
     if model is not None:
 
-        input_df = pd.DataFrame([{
-            "Area": base_area,
-            "Item": base_item,
-            "Year": base_year,
-            "average_rain_fall_mm_per_year": rainfall,
-            "pesticides_tonnes": pesticides,
-            "avg_temp": temp
-        }])
+        input_df = pd.DataFrame(
+            [
+                {
+                    "Area": base_area,
+                    "Item": base_item,
+                    "Year": base_year,
+                    "average_rain_fall_mm_per_year": rainfall,
+                    "pesticides_tonnes": pesticides,
+                    "avg_temp": temp,
+                }
+            ]
+        )
 
         pred = model.predict(input_df)[0]
 
         st.metric("Predicted Yield (hg/ha)", f"{pred:,.0f}")
-
-        st.caption("Adjust sliders to understand how climate & pesticide changes influence yield.")
-
-
+        st.caption(
+            "Adjust sliders to understand how changes in climate and pesticide usage "
+            "could influence future yields."
+        )
 
 # --------------------------------------------------
 # PAGE 3 — Model KPIs
@@ -199,7 +220,8 @@ else:
         st.write(f"**MAE:**  {mae:,.0f}")
         st.write(f"**R²:**   {r2:.3f}")
 
-        st.markdown("""
+        st.markdown(
+            """
         **Interpretation**
         - Lower RMSE & MAE → more accurate predictions  
         - Higher R² → model explains a greater share of yield variance  
@@ -210,5 +232,5 @@ else:
         - Reduction in planning errors  
         - Higher yield for resource-constrained farmers  
         - Increased adoption of advisory services  
-        """)
-
+        """
+        )
