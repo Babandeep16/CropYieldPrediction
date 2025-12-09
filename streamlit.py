@@ -111,7 +111,7 @@ def flag_extremes(rainfall, temp, pesticides, container):
 # --------------------------------------------------
 if page == "Single Prediction":
 
-    st.subheader("🔮 Single Yield Prediction")
+    st.subheader(" Single Yield Prediction")
 
     col1, col2 = st.columns(2)
 
@@ -167,7 +167,7 @@ if page == "Single Prediction":
 
         pred = model.predict(input_df)[0]
 
-        st.success(f"### 🌱 Predicted Yield: **{pred:,.0f} hg/ha**")
+        st.success(f"###  Predicted Yield: **{pred:,.0f} hg/ha**")
         st.caption("Model: Random Forest Regressor + full preprocessing pipeline.")
 
 # --------------------------------------------------
@@ -175,7 +175,7 @@ if page == "Single Prediction":
 # --------------------------------------------------
 elif page == "What-if Analysis":
 
-    st.subheader("🧪 What-If Scenario Analysis")
+    st.subheader(" What-If Scenario Analysis")
 
     base_area = st.selectbox("Country", countries)
     base_item = st.selectbox("Crop Type", crops)
@@ -244,7 +244,7 @@ elif page == "What-if Analysis":
 # --------------------------------------------------
 else:
 
-    st.subheader("📈 Model Performance & KPIs")
+    st.subheader(" Model Performance & KPIs")
 
     from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
